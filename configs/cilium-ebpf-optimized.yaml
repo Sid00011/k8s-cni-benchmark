@@ -1,0 +1,24 @@
+# configs/cilium-ebpf-optimized.yaml
+# Configuration utilisée pour atteindre 2.28 Gbps (eBPF Direct Routing)
+# Auteur: Sidali 
+
+cluster:
+  name: k8s-benchmark-cluster
+  id: 1
+
+tunnel: disabled               # Désactivation du VXLAN pour routage direct eBPF
+autoDirectNodeRoutes: true
+nativeRoutingCIDR: 10.0.0.0/16
+endpointRoutes:
+  enabled: true
+
+ipam:
+  mode: kubernetes
+
+operator:
+  replicas: 1
+
+# Bypassing iptables for maximum throughput
+bpf:
+  masquerade: true
+  tproxy: true
