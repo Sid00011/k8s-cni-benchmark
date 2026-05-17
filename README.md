@@ -42,6 +42,6 @@ Le benchmark a été réalisé sur un cluster de 3 nœuds (Ubuntu 22.04, K8s v1.
 3.  **Avertissement :** Éviter **Flannel** en production pour des besoins de haute performance ou de stabilité multi-nœuds.
 
 ---
-**Auteur :** Sidali Mezaourou  
+**Auteur :** Sidali   
 **Domaine :** Cloud Networking & Infrastructure Orchestration  
 **Date :** Mars 2026
