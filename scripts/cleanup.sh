@@ -1,24 +1,24 @@
 #!/bin/bash
-# cleanup.sh - Nettoyage des traces CNI pour tests multi-environnements
-# Auteur: Sidali Mezaourou
+# cleanup.sh — Remove residual CNI interfaces and config between benchmark runs
+# Author: Sidali
 
-echo "--- Début du nettoyage des interfaces et configurations CNI ---"
+echo "--- Starting CNI cleanup ---"
 
-# 1. Arrêt de kubelet
+# 1. Stop kubelet
 sudo systemctl stop kubelet
 
-# 2. Suppression des interfaces réseaux résiduelles (Flannel, Calico, OVN)
+# 2. Delete residual network interfaces (Flannel, Calico, OVN)
 sudo ip link delete cni0 2>/dev/null
 sudo ip link delete flannel.1 2>/dev/null
 sudo ip link delete ovn-nb 2>/dev/null
-sudo ip link delete cali596bcf58a91 2>/dev/null # Exemple d'interface veth Calico
+sudo ip link delete cali596bcf58a91 2>/dev/null  # example Calico veth interface
 
-# 3. Nettoyage des répertoires de configuration
+# 3. Wipe CNI config and state directories
 sudo rm -rf /etc/cni/net.d/*
 sudo rm -rf /var/lib/cni/*
 
-# 4. Redémarrage du réseau et de kubelet
+# 4. Restart networking and kubelet
 sudo systemctl restart networking
 sudo systemctl start kubelet
 
-echo "--- Système prêt pour le déploiement d'un nouveau CNI ---"
+echo "--- System ready for next CNI deployment ---"
