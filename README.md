@@ -1,7 +1,6 @@
 # Kubernetes CNI Performance Benchmark
 
-**Comparative study of four Kubernetes CNI plugins — Cilium, Calico, Kube-OVN, and Flannel —
-across 14 TCP/UDP performance metrics on a multi-node cluster.**
+Comparative study of four Kubernetes CNI plugins - Cilium, Calico, Kube-OVN, and Flannel - across 14 TCP/UDP performance metrics on a multi-node cluster.
 
 ---
 
@@ -9,28 +8,28 @@ across 14 TCP/UDP performance metrics on a multi-node cluster.**
 
 | CNI | TCP Throughput | Retransmissions | Avg Latency | UDP Jitter | UDP Loss | MTU |
 |---|---|---|---|---|---|---|
-| **Cilium** | **2.28 Gbps** | **0** | **3.0 ms** | ~1 ms | — | 1500 |
-| Calico | 377 Mbps | 169 | 4.36 ms | 7.45 ms | — | 1480 |
+| **Cilium** | **2.28 Gbps** | **0** | **3.0 ms** | ~1 ms | - | 1500 |
+| Calico | 377 Mbps | 169 | 4.36 ms | 7.45 ms | - | 1480 |
 | Kube-OVN | 3.5 Mbps | High | 36 ms | 88.5 ms | 32% | 1400 |
-| Flannel | Failed | — | — | — | — | 1450 |
+| Flannel | Failed | - | - | - | - | 1450 |
 
-**Bottom line:** Cilium dominates across every metric. Flannel and Kube-OVN are not
-production-ready in multi-CNI environments.
+| Cilium 2.28 Gbps | Calico 377 Mbps | Kube-OVN 32% loss |
+|---|---|---|
+| ![](results/cilium_throughput_2.28gbps.png) | ![](results/calico_throughput_377mbps.png) | ![](results/kube_ovn_udp_packet_loss_32pct.png) |
+
+**Bottom line:** Cilium dominates across every metric. Flannel and Kube-OVN are not production-ready in multi-CNI environments.
 
 ---
 
 ## Why this study
 
-Network performance in Kubernetes directly impacts QoS for distributed applications.
-The choice of CNI affects:
+Network performance in Kubernetes directly impacts QoS for distributed applications. The choice of CNI affects:
 
 - Effective inter-pod throughput (goodput)
 - Latency and jitter for real-time workloads
 - Operational stability under load
 
-Most available benchmarks cover only Cilium vs Calico. This study adds Kube-OVN
-and documents a phenomenon not covered elsewhere: **kernel pollution from multi-CNI
-residual interfaces** — and how it breaks benchmark isolation.
+Most available benchmarks cover only Cilium vs Calico. This study adds Kube-OVN and documents a phenomenon not covered elsewhere: **kernel pollution from multi-CNI residual interfaces** - and how it breaks benchmark isolation.
 
 ---
 
@@ -42,8 +41,8 @@ residual interfaces** — and how it breaks benchmark isolation.
 | Worker-1 | 2 | 4 GB | Ubuntu 22.04 | v1.28 |
 | Worker-2 | 2 | 4 GB | Ubuntu 22.04 | v1.28 |
 
-- Physical interfaces: `enp0s3` / `enp0s8`, MTU 1500
-- Cluster network: `10.0.0.0/16` (Cilium, Flannel, Kube-OVN) · `192.168.0.0/16` (Calico)
+- Physical interfaces: enp0s3 / enp0s8, MTU 1500
+- Cluster network: 10.0.0.0/16 (Cilium, Flannel, Kube-OVN) - 192.168.0.0/16 (Calico)
 
 ---
 
@@ -55,62 +54,61 @@ residual interfaces** — and how it breaks benchmark isolation.
 | ping | Latency, packet loss, MTU | `ping -s <size> -c 10` |
 | Apache Bench | HTTP application performance | `ab -n 200 -c 10` |
 
-Each test repeated 5 times — results show mean and standard deviation.
-Baseline: Nginx serving HTTP — **652 req/sec, 15.3ms** with no CNI overhead.
+Each test repeated 5 times - results show mean and standard deviation.
+Baseline: Nginx serving HTTP - **652 req/sec, 15.3ms** with no CNI overhead.
 
 ---
 
 ## Results
 
-### Cilium — eBPF native routing
+### Cilium - eBPF native routing
 
 - TCP throughput: **2.28 Gbps, 0 retransmissions**
-- Average latency: **~3 ms**, jitter ~1 ms
-- Full MTU (1500) — no fragmentation
-- iptables bypass via eBPF → direct kernel-level packet routing
+- Average latency: ~3 ms, jitter ~1 ms
+- Full MTU (1500) - no fragmentation
+- iptables bypass via eBPF - direct kernel-level packet routing
 - Maximum stability across all test runs
 
-Cilium's eBPF dataplane eliminates the overhead of iptables chain traversal entirely.
-The result is near line-rate throughput with latency indistinguishable from a raw socket.
+Cilium's eBPF dataplane eliminates the overhead of iptables chain traversal entirely. The result is near line-rate throughput with latency indistinguishable from a raw socket.
 
-### Calico — VXLAN/BGP hybrid
+### Calico - VXLAN/BGP hybrid
 
-- TCP throughput: **377 Mbps**, 169 retransmissions
-- Average latency: **4.36 ms**, jitter 7.45 ms
-- MTU reduced to 1480 — software fragmentation overhead
+- TCP throughput: 377 Mbps, 169 retransmissions
+- Average latency: 4.36 ms, jitter 7.45 ms
+- MTU reduced to 1480 - software fragmentation overhead
 - Stable pod lifecycle, enterprise-grade NetworkPolicy support
 
-Calico is production-ready and operationally mature. The throughput gap vs Cilium
-comes entirely from VXLAN encapsulation overhead and iptables chain processing.
+Calico is production-ready and operationally mature. The throughput gap vs Cilium comes entirely from VXLAN encapsulation overhead and iptables chain processing.
 
-### Kube-OVN — OVS/OVN overlay
+![Calico veth MTU 1480](results/calico_veth_mtu_1480.png)
 
-- UDP throughput: **2.74–3.5 Mbps**, **32% packet loss** under load
-- Average latency: **36 ms**, peaks at **98 ms** (1400-byte frames)
-- Jitter: 88.5 ms — unusable for real-time workloads
+### Kube-OVN - OVS/OVN overlay
+
+- UDP throughput: 2.74-3.5 Mbps, 32% packet loss under load
+- Average latency: 36 ms, peaks at 98 ms (1400-byte frames)
+- Jitter: 88.5 ms - unusable for real-time workloads
 - Frequent pod restarts observed throughout testing
-- MTU reduced to 1400 — significant fragmentation
+- MTU reduced to 1400 - significant fragmentation
 
-The primary finding: Kube-OVN leaves OVS kernel modules loaded after uninstallation.
-These residual interfaces (`flannel.1`, `cni0`) pollute the kernel networking stack
-and degrade performance of subsequently installed CNIs. This is not documented
-in Kube-OVN's official documentation.
+The primary finding: Kube-OVN leaves OVS kernel modules loaded after uninstallation. These residual interfaces (flannel.1, cni0) pollute the kernel networking stack and degrade performance of subsequently installed CNIs. This is not documented in Kube-OVN's official documentation.
 
-### Flannel — VXLAN overlay
+![Kube-OVN latency 98ms](results/kube_ovn_latency_ping_98ms.png)
 
-- Pods entered `CrashLoopBackOff` — benchmark could not complete
-- MTU reduced to 1450 — fragmentation confirmed
+### Flannel - VXLAN overlay
+
+- Pods entered CrashLoopBackOff - benchmark could not complete
+- MTU reduced to 1450 - fragmentation confirmed
 - Multi-node stability: failed
+
+![Flannel CrashLoopBackOff](results/flannel_crashloopbackoff_error.png)
 
 Flannel is not suitable for multi-node production environments.
 
 ---
 
-## Key finding — kernel pollution
+## Key finding - kernel pollution
 
-Switching CNIs without aggressive cleanup leaves residual kernel interfaces that
-corrupt subsequent benchmark results. This study documents the forensic cleanup
-procedure required for reliable multi-CNI testing:
+Switching CNIs without aggressive cleanup leaves residual kernel interfaces that corrupt subsequent benchmark results. This study documents the forensic cleanup procedure required for reliable multi-CNI testing:
 
 ```bash
 # Required between each CNI installation
