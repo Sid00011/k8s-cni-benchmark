@@ -1,6 +1,6 @@
 # configs/calico-vxlan-standard.yaml
-# Configuration Calico avec encapsulation VXLAN (Standard)
-# Auteur: Sidali 
+# Calico configuration with VXLAN encapsulation (standard mode)
+# Author: Sidali
 
 kind: Installation
 apiVersion: operator.tigera.io/v1
@@ -13,7 +13,7 @@ spec:
     ipPools:
     - blockSize: 26
       cidr: 192.168.0.0/16
-      encapsulation: VXLAN    # Cause de l'overhead constaté dans le rapport
+      encapsulation: VXLAN    # source of the overhead documented in the report
       natOutgoing: Enabled
       nodeSelector: all()
-    mtu: 1480                 # Réglage spécifique pour éviter l'overhead VXLAN
+    mtu: 1480                 # reduced from 1500 to account for VXLAN header overhead
